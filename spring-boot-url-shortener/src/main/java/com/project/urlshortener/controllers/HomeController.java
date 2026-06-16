@@ -6,6 +6,7 @@ import com.project.urlshortener.exceptions.ShortUrlNotFoundException;
 import com.project.urlshortener.model.CreateShortUrlCmd;
 import com.project.urlshortener.model.ShortUrl;
 import com.project.urlshortener.model.ShortUrlDto;
+import com.project.urlshortener.model.User;
 import com.project.urlshortener.services.ShortUrlService;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
@@ -25,14 +26,17 @@ public class HomeController {
 
     private final ShortUrlService shortUrlService;
     private final ApplicationProperties properties;
+    private final SecurityUtils securityUtils;
 
-    public HomeController(ShortUrlService shortUrlService, ApplicationProperties properties) {
+    public HomeController(ShortUrlService shortUrlService, ApplicationProperties properties, SecurityUtils securityUtils) {
         this.shortUrlService = shortUrlService;
         this.properties = properties;
+        this.securityUtils = securityUtils;
     }
 
     @GetMapping("/")
     String home(Model model) {
+        User currentUser = securityUtils.getCurrentUser();
 //        List<ShortUrl> shortUrls = shortUrlRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
 //        List<ShortUrl> shortUrls = shortUrlRepository.findByIsPrivateIsFalseOrderByCreatedAtDesc();
         List<ShortUrlDto> shortUrls = shortUrlService.findAllPublicShortUrls();
