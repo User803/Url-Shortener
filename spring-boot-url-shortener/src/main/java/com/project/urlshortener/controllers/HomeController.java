@@ -6,6 +6,8 @@ import com.project.urlshortener.exceptions.ShortUrlNotFoundException;
 import com.project.urlshortener.model.*;
 import com.project.urlshortener.services.ShortUrlService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -31,13 +33,13 @@ public class HomeController {
     @GetMapping("/")
     String home(
             @RequestParam(defaultValue = "1") Integer page,
+//            Can also use Pageable with defaults instead of above and change some logic in the method, but this will bring tight coupling to JPA
+//            @PageableDefault(page = 1, size = 10) Pageable pageable,
             Model model) {
 //        User currentUser = securityUtils.getCurrentUser();
 //        List<ShortUrl> shortUrls = shortUrlRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
 //        List<ShortUrl> shortUrls = shortUrlRepository.findByIsPrivateIsFalseOrderByCreatedAtDesc();
-        PagedResult<ShortUrlDto> shortUrls = shortUrlService.findAllPublicShortUrls(page, properties.pageSize());
-        model.addAttribute("shortUrls", shortUrls);
-        model.addAttribute("baseUrl", properties.baseUrl());
+        this.addShortUrlsDataToModel(model, page);
         model.addAttribute("createShortUrlForm", new CreateShortUrlForm("", false, null));
         return "index";
     }
@@ -53,9 +55,7 @@ public class HomeController {
                                  RedirectAttributes redirectAttributes,
                                  Model model) {
         if (bindingResult.hasErrors()) {
-            PagedResult<ShortUrlDto> shortUrls = shortUrlService.findAllPublicShortUrls(1, properties.pageSize());
-            model.addAttribute("shortUrls", shortUrls);
-            model.addAttribute("baseUrl", properties.baseUrl());
+            this.addShortUrlsDataToModel(model, 1);
             return "index";
         }
 
@@ -77,6 +77,13 @@ public class HomeController {
         }
 
         return "redirect:/";
+    }
+
+    // Avoids duplication of code
+    private void addShortUrlsDataToModel(Model model, int pageNo) {
+        PagedResult<ShortUrlDto> shortUrls = shortUrlService.findAllPublicShortUrls(pageNo, properties.pageSize());
+        model.addAttribute("shortUrls", shortUrls);
+        model.addAttribute("baseUrl", properties.baseUrl());
     }
 
     @GetMapping("/s/{shortKey}")
