@@ -36,13 +36,13 @@ public class HomeController {
 
     @GetMapping("/")
     String home(Model model) {
-        User currentUser = securityUtils.getCurrentUser();
+//        User currentUser = securityUtils.getCurrentUser();
 //        List<ShortUrl> shortUrls = shortUrlRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
 //        List<ShortUrl> shortUrls = shortUrlRepository.findByIsPrivateIsFalseOrderByCreatedAtDesc();
         List<ShortUrlDto> shortUrls = shortUrlService.findAllPublicShortUrls();
         model.addAttribute("shortUrls", shortUrls);
         model.addAttribute("baseUrl", properties.baseUrl());
-        model.addAttribute("createShortUrlForm", new CreateShortUrlForm(""));
+        model.addAttribute("createShortUrlForm", new CreateShortUrlForm("", false, null));
         return "index";
     }
 
@@ -64,7 +64,13 @@ public class HomeController {
         }
 
         try {
-            CreateShortUrlCmd cmd = new CreateShortUrlCmd(createShortUrlForm.originalUrl());
+            Long userId = securityUtils.getCurrentUserId();
+            CreateShortUrlCmd cmd = new CreateShortUrlCmd(
+                    createShortUrlForm.originalUrl(),
+                    createShortUrlForm.isPrivate(),
+                    createShortUrlForm.expirationInDays(),
+                    userId
+            );
             ShortUrlDto shortUrlDto = shortUrlService.createShortUrl(cmd);
 
             // Using RedirectAttributes to follow the Post/Redirect/Get pattern to avoid duplicate requests i.e., when form data is submitted redirect elsewhere to prevent duplicate POST requests
@@ -79,8 +85,8 @@ public class HomeController {
 
     @GetMapping("/s/{shortKey}")
     String redirectToOriginalUrl(@PathVariable String shortKey, Model model) {
-        Optional<ShortUrlDto> shortUrlDtoOptional = shortUrlService.accessShortUrl(shortKey);
-
+        Long userId = securityUtils.getCurrentUserId();
+        Optional<ShortUrlDto> shortUrlDtoOptional = shortUrlService.accessShortUrl(shortKey, userId);
         if (shortUrlDtoOptional.isEmpty()) {
             throw new ShortUrlNotFoundException(shortKey);
         }

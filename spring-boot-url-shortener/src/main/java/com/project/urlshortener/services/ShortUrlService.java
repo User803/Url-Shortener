@@ -5,6 +5,7 @@ import com.project.urlshortener.model.CreateShortUrlCmd;
 import com.project.urlshortener.model.ShortUrl;
 import com.project.urlshortener.model.ShortUrlDto;
 import com.project.urlshortener.repositories.ShortUrlRepository;
+import com.project.urlshortener.repositories.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +13,7 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -21,11 +23,13 @@ public class ShortUrlService {
     private final ShortUrlRepository shortUrlRepository;
     private final EntityMapper entityMapper;
     private final ApplicationProperties properties;
+    private final UserRepository userRepository;
 
-    public ShortUrlService(ShortUrlRepository shortUrlRepository, EntityMapper entityMapper, ApplicationProperties properties) {
+    public ShortUrlService(ShortUrlRepository shortUrlRepository, EntityMapper entityMapper, ApplicationProperties properties, UserRepository userRepository) {
         this.shortUrlRepository = shortUrlRepository;
         this.entityMapper = entityMapper;
         this.properties = properties;
+        this.userRepository = userRepository;
     }
 
     public List<ShortUrlDto> findAllPublicShortUrls() {
@@ -38,21 +42,27 @@ public class ShortUrlService {
     @Transactional
     public ShortUrlDto createShortUrl(CreateShortUrlCmd shortUrlCmd) {
         // User must be online for this check to work
-        if (properties.validateOriginalUrl()) {
-            boolean urlExists = UrlExistenceValidator.isUrlExists(shortUrlCmd.originalUrl());
-            if (!urlExists) {
-                throw new RuntimeException("Invalid URL " + shortUrlCmd.originalUrl());
-            }
-        }
+//        if (properties.validateOriginalUrl()) {
+//            boolean urlExists = UrlExistenceValidator.isUrlExists(shortUrlCmd.originalUrl());
+//            if (!urlExists) {
+//                throw new RuntimeException("Invalid URL " + shortUrlCmd.originalUrl());
+//            }
+//        }
 
         var shortKey = generateUniqueShortKey();
         ShortUrl shortUrl = new ShortUrl();
-        shortUrl.setPrivate(false);
         shortUrl.setOriginalUrl(shortUrlCmd.originalUrl());
         shortUrl.setShortKey(shortKey);
-        shortUrl.setCreatedBy(null);
+        if (shortUrlCmd.userId() == null) {
+            shortUrl.setCreatedBy(null);
+            shortUrl.setPrivate(false);
+            shortUrl.setExpiresAt(Instant.now().plus(properties.defaultExpiryInDays(), ChronoUnit.DAYS));
+        } else {
+            shortUrl.setCreatedBy(userRepository.findById(shortUrlCmd.userId()).orElseThrow());
+            shortUrl.setPrivate(shortUrlCmd.isPrivate() != null && shortUrlCmd.isPrivate());
+            shortUrl.setExpiresAt(shortUrlCmd.expirationInDays() != null ? Instant.now().plus(shortUrlCmd.expirationInDays() , ChronoUnit.DAYS) : null);
+        }
         shortUrl.setClickCount(0L);
-        shortUrl.setExpiresAt(Instant.now().plus(properties.defaultExpiryInDays(), ChronoUnit.DAYS));
         shortUrl.setCreatedAt(Instant.now());
         shortUrlRepository.save(shortUrl);
 
@@ -83,7 +93,7 @@ public class ShortUrlService {
     }
 
     @Transactional
-    public Optional<ShortUrlDto> accessShortUrl(String shortKey) {
+    public Optional<ShortUrlDto> accessShortUrl(String shortKey, Long userId) {
         Optional<ShortUrl> shortUrlOptional = shortUrlRepository.findByShortKey(shortKey);
         if (shortUrlOptional.isEmpty()) {
             return Optional.empty();
@@ -91,6 +101,13 @@ public class ShortUrlService {
 
         ShortUrl shortUrl = shortUrlOptional.get();
         if (shortUrl.getExpiresAt() != null && shortUrl.getExpiresAt().isBefore(Instant.now())) {
+            return Optional.empty();
+        }
+
+        // Check if the URL is private if so; this user is the one who added this private URL and is logged in
+        if (shortUrl.getPrivate() != null &&
+                shortUrl.getCreatedBy() != null &&
+                !Objects.equals(shortUrl.getCreatedBy().getId(), userId)) {
             return Optional.empty();
         }
 
