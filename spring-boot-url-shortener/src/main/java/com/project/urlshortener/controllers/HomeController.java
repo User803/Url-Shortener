@@ -3,19 +3,13 @@ package com.project.urlshortener.controllers;
 import com.project.urlshortener.ApplicationProperties;
 import com.project.urlshortener.dtos.CreateShortUrlForm;
 import com.project.urlshortener.exceptions.ShortUrlNotFoundException;
-import com.project.urlshortener.model.CreateShortUrlCmd;
-import com.project.urlshortener.model.ShortUrl;
-import com.project.urlshortener.model.ShortUrlDto;
-import com.project.urlshortener.model.User;
+import com.project.urlshortener.model.*;
 import com.project.urlshortener.services.ShortUrlService;
 import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
@@ -35,11 +29,13 @@ public class HomeController {
     }
 
     @GetMapping("/")
-    String home(Model model) {
+    String home(
+            @RequestParam(defaultValue = "1") Integer page,
+            Model model) {
 //        User currentUser = securityUtils.getCurrentUser();
 //        List<ShortUrl> shortUrls = shortUrlRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
 //        List<ShortUrl> shortUrls = shortUrlRepository.findByIsPrivateIsFalseOrderByCreatedAtDesc();
-        List<ShortUrlDto> shortUrls = shortUrlService.findAllPublicShortUrls();
+        PagedResult<ShortUrlDto> shortUrls = shortUrlService.findAllPublicShortUrls(page, properties.pageSize());
         model.addAttribute("shortUrls", shortUrls);
         model.addAttribute("baseUrl", properties.baseUrl());
         model.addAttribute("createShortUrlForm", new CreateShortUrlForm("", false, null));
@@ -57,7 +53,7 @@ public class HomeController {
                                  RedirectAttributes redirectAttributes,
                                  Model model) {
         if (bindingResult.hasErrors()) {
-            List<ShortUrlDto> shortUrls = shortUrlService.findAllPublicShortUrls();
+            PagedResult<ShortUrlDto> shortUrls = shortUrlService.findAllPublicShortUrls(1, properties.pageSize());
             model.addAttribute("shortUrls", shortUrls);
             model.addAttribute("baseUrl", properties.baseUrl());
             return "index";

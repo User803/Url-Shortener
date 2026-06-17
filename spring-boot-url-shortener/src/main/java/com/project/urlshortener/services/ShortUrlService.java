@@ -2,10 +2,15 @@ package com.project.urlshortener.services;
 
 import com.project.urlshortener.ApplicationProperties;
 import com.project.urlshortener.model.CreateShortUrlCmd;
+import com.project.urlshortener.model.PagedResult;
 import com.project.urlshortener.model.ShortUrl;
 import com.project.urlshortener.model.ShortUrlDto;
 import com.project.urlshortener.repositories.ShortUrlRepository;
 import com.project.urlshortener.repositories.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,11 +37,26 @@ public class ShortUrlService {
         this.userRepository = userRepository;
     }
 
-    public List<ShortUrlDto> findAllPublicShortUrls() {
-        return shortUrlRepository.findPublicShortUrlsEntityGraph()
-                .stream()
-                .map(entityMapper::toShortUrlDto)
-                .toList();
+    // Has No Pagination
+//    public List<ShortUrlDto> findAllPublicShortUrls() {
+//        Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+//        Page<ShortUrl> shortUrlPage = shortUrlRepository.findAll(pageable);
+//
+//        return shortUrlRepository.findPublicShortUrlsEntityGraph()
+//                .stream()
+//                .map(entityMapper::toShortUrlDto)
+//                .toList();
+//    }
+
+    public PagedResult<ShortUrlDto> findAllPublicShortUrls(int pageNo, int pageSize) {
+        // Because the page starts from 0 in Page but users start from 1
+        pageNo = pageNo > 1 ? pageNo - 1 : 0;
+        Pageable pageable = PageRequest.of(pageNo, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Page<ShortUrlDto> shortUrlDtoPage = shortUrlRepository.findPublicShortUrls(pageable)
+                .map(entityMapper::toShortUrlDto);
+
+        return PagedResult.from(shortUrlDtoPage);
     }
 
     @Transactional
