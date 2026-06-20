@@ -1,4 +1,4 @@
-package com.project.urlshortener.controllers;
+package com.project.urlshortener.config;
 
 import com.project.urlshortener.model.User;
 import com.project.urlshortener.repositories.UserRepository;

@@ -1,13 +1,12 @@
 package com.project.urlshortener.controllers;
 
 import com.project.urlshortener.ApplicationProperties;
+import com.project.urlshortener.config.SecurityUtils;
 import com.project.urlshortener.dtos.CreateShortUrlForm;
 import com.project.urlshortener.exceptions.ShortUrlNotFoundException;
 import com.project.urlshortener.model.*;
 import com.project.urlshortener.services.ShortUrlService;
 import jakarta.validation.Valid;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
