@@ -40,13 +40,29 @@ public class HomeController {
 //        List<ShortUrl> shortUrls = shortUrlRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"));
 //        List<ShortUrl> shortUrls = shortUrlRepository.findByIsPrivateIsFalseOrderByCreatedAtDesc();
         this.addShortUrlsDataToModel(model, page);
-        model.addAttribute("createShortUrlForm", new CreateShortUrlForm("", false, null));
+        model.addAttribute("paginationUrl", "/");
+        model.addAttribute("createShortUrlForm",
+                new CreateShortUrlForm("", false, null));
         return "index";
     }
 
     @GetMapping("/login")
     String loginForm() {
         return "login";
+    }
+
+    @GetMapping("/my-urls")
+    public String showUserUrls(
+            @RequestParam(defaultValue = "1") int page,
+            Model model) {
+
+        var currentUserId = securityUtils.getCurrentUserId();
+        PagedResult<ShortUrlDto> myUrls = shortUrlService.getUserShortUrls(currentUserId, page, properties.pageSize());
+        model.addAttribute("shortUrls", myUrls);
+        model.addAttribute("baseUrl", properties.baseUrl());
+        model.addAttribute("paginationUrl", "/my-urls");
+
+        return "my-urls";
     }
 
     @PostMapping("/short-urls")
@@ -96,5 +112,26 @@ public class HomeController {
 
         ShortUrlDto shortUrlDto = shortUrlDtoOptional.get();
         return "redirect:" + shortUrlDto.originalUrl();
+    }
+
+    @PostMapping("/delete-urls")
+    public String deleteUrls(
+            @RequestParam(value = "ids", required = false) List<Long> ids,
+            RedirectAttributes redirectAttributes) {
+
+        if (ids == null || ids.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "No URLs selected for deletion");
+            return "redirect:/my-urls";
+        }
+
+        try {
+            var currentUserId = securityUtils.getCurrentUserId();
+            shortUrlService.deleteUserShortUrls(ids, currentUserId);
+            redirectAttributes.addFlashAttribute("successMessage", "Selected URLs deleted successfully");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Failed to delete URLs" + e.getMessage());
+        }
+
+        return "redirect:/my-urls";
     }
 }
