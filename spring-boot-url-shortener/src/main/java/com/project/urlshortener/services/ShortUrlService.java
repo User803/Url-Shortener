@@ -125,6 +125,7 @@ public class ShortUrlService {
 
         // Check if the URL is private if so; this user is the one who added this private URL and is logged in
         if (shortUrl.getPrivate() != null &&
+                shortUrl.getPrivate() &&
                 shortUrl.getCreatedBy() != null &&
                 !Objects.equals(shortUrl.getCreatedBy().getId(), userId)) {
             return Optional.empty();

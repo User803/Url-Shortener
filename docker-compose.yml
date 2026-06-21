@@ -6,4 +6,17 @@ services:
       - 'POSTGRES_USER=user'
       - 'POSTGRES_PASSWORD=password'
     ports:
-      - '5432:5432'
+      - '5432'
+
+  spring-boot-url-shortener:
+    image: user803/spring-boot-url-shortener
+    container_name: spring-boot-url-shortener
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/urlshortener
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: password
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    depends_on:
+      - postgres
